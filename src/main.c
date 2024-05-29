@@ -10,9 +10,53 @@
 int WIN_WIDTH = 800;
 int WIN_HEIGHT = 600;
 
+void help(void) {
+    puts("viewimg [OPTIONS] [PATH]\n\n"
+         "An image viewer made for mostly educational purposes\n"
+         "OPTIONS:\n"
+         "\t-r        | resize the window to the size of the image (Defailt window size is 800x600)\n"
+         "\t-h        | print this and exit");
+}
+
+void getArgFunc(char arg) {}
+
 int main(int argc, char const *argv[]) {
+    char *path = calloc(400, sizeof(char));
+
+    if (!path) {
+        perror("Failed to allocate space to the path string");
+        return 1;
+    }
+
+    char *backupPath = path;
+
     if (argc < 2) {
-        puts("viewimg [PATH]\n\nThis is a (supposedly) lightweight image viewer");
+        help();
+        return 1;
+    } else if (argc >= 2) {
+        for (int8_t i = 1; i < argc; i+=1) {
+            switch (argv[i][0]) {
+            case '-':
+                getArgFunc(argv[i][1]);
+                break;
+            
+            default:
+                if (strlen(path) < strlen(argv[i])) {
+                    path = realloc(path, strlen(argv[i])*sizeof(char));
+                    if (!path) {
+                        perror("Failed to resize space to the path string");
+                        free(backupPath);
+                        return 1;
+                    }
+                }
+                strcpy(path, argv[i]);
+                break;
+            }
+        }
+    }
+    if (path[0] == '\0') {
+        perror("Image path is empty\nYou must've specified a flag without the image path\nOr an error occured");
+        free(path);
         return 1;
     }
 
@@ -36,6 +80,7 @@ int main(int argc, char const *argv[]) {
                                           0);
     if (!window) {
         printf("Window creation error: %s\n", SDL_GetError());
+        SDL_Quit();
         return 1;
     }
 
@@ -43,33 +88,26 @@ int main(int argc, char const *argv[]) {
     
     if (!renderer) {
         printf("Renderer creation error: %s\n", SDL_GetError());
+        SDL_Quit();
         return 1;
     }
 
     bool hasQuit = false;
     SDL_Event event;
 
-    SDL_Texture *image = IMG_LoadTexture(renderer, "/home/Moldy/txt");
+    SDL_Surface *imgSurf = IMG_Load(path);
 
-    if (argc > 2) {
-        for (int8_t i = 1; i < argc; i+=1) {
-            switch (argv[i][1])
-            {
-            case 'f':
-                SDL_QueryTexture(image, NULL, NULL, &WIN_WIDTH, &WIN_HEIGHT);
-                SDL_SetWindowSize(window, WIN_WIDTH, WIN_HEIGHT);
-                break;
-            
-            default:
-                break;
-            }
-        }
-    }
-
-    if (!image) {
-        printf("Error loading image: %s", SDL_GetError);
+    if (!imgSurf) {
+        fprintf(stderr, "Image error: %s\n", SDL_GetError());
+        free(path);
+        SDL_Quit();
         return 1;
     }
+
+    SDL_Texture *image = SDL_CreateTextureFromSurface(renderer, imgSurf);
+    SDL_FreeSurface(imgSurf);
+
+    free(path);
 
     int start, end;
 
@@ -99,7 +137,8 @@ int main(int argc, char const *argv[]) {
 
     SDL_DestroyTexture(image);
     SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);   
+    SDL_DestroyWindow(window);
+    IMG_Quit();
     SDL_Quit();
 
     return 0;
