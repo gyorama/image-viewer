@@ -5,20 +5,17 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <time.h>
 
-int WIN_WIDTH = 800;
-int WIN_HEIGHT = 600;
+#define WIN_WIDTH 800
+#define WIN_HEIGHT 600
 
 void help(void) {
     puts("viewimg [OPTIONS] [PATH]\n\n"
          "An image viewer made for mostly educational purposes\n"
-         "OPTIONS:\n"
-         "\t-r        | resize the window to the size of the image (Defailt window size is 800x600)\n"
-         "\t-h        | print this and exit");
+         "Controls:\n"
+         "\tr        | resize the window to the size of the image (Defailt window size is 800x600)\n"
+         "\tf        | Fullscreen the window");
 }
-
-void getArgFunc(char arg) {}
 
 int main(int argc, char const *argv[]) {
     char *path = calloc(400, sizeof(char));
@@ -36,9 +33,6 @@ int main(int argc, char const *argv[]) {
     } else if (argc >= 2) {
         for (int8_t i = 1; i < argc; i+=1) {
             switch (argv[i][0]) {
-            case '-':
-                getArgFunc(argv[i][1]);
-                break;
             
             default:
                 if (strlen(path) < strlen(argv[i])) {
@@ -55,13 +49,13 @@ int main(int argc, char const *argv[]) {
         }
     }
     if (path[0] == '\0') {
-        perror("Image path is empty\nYou must've specified a flag without the image path\nOr an error occured");
+        perror("Image path is empty\n");
         free(path);
         return 1;
     }
 
     // Initialize the SDL libraries
-    if (SDL_Init(SDL_INIT_EVERYTHING)) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
         printf("SDL initialization error: %s\n", SDL_GetError());
         return 1;
     }
@@ -88,6 +82,7 @@ int main(int argc, char const *argv[]) {
     
     if (!renderer) {
         printf("Renderer creation error: %s\n", SDL_GetError());
+        free(path);
         SDL_Quit();
         return 1;
     }
@@ -105,36 +100,48 @@ int main(int argc, char const *argv[]) {
     }
 
     SDL_Texture *image = SDL_CreateTextureFromSurface(renderer, imgSurf);
-    SDL_FreeSurface(imgSurf);
+    SDL_RenderCopy(renderer, image, NULL, NULL);
+    SDL_RenderPresent(renderer);
 
-    free(path);
-
-    int start, end;
+    bool isFullscreen = false;
+    bool isTheSizeOfImage = false;
 
     while (!hasQuit) {
-        start = SDL_GetTicks();
-        srand(time(NULL));
         if (SDL_PollEvent(&event)) {
             switch (event.type) {
                 case SDL_QUIT:
                     hasQuit = true;
                     break;
+                case SDL_KEYDOWN:
+                    if (event.key.keysym.scancode == SDL_SCANCODE_F) {
+                        SDL_SetWindowFullscreen(window, (isFullscreen) ? SDL_WINDOW_FULLSCREEN : 0); // set window to fullscreen if `fullscreen` is true  
+                        isFullscreen = (isFullscreen) ? false : true; // Sidenote: I think I'm overusing the ? operator
+                    } else if (event.key.keysym.scancode == SDL_SCANCODE_R) {
+                        // inconsistency in ? and if statement in this and previous part is because this part requires 2 arguments
+                        if (isTheSizeOfImage) {
+                            SDL_SetWindowSize(window, WIN_WIDTH, WIN_HEIGHT);
+                            SDL_RenderClear(renderer);
+                            SDL_RenderCopy(renderer, image, NULL, NULL);
+                            SDL_RenderPresent(renderer);
+                            isTheSizeOfImage = false;
+                            continue;
+                        }
+                        SDL_SetWindowSize(window, imgSurf->w, imgSurf->h);
+                        SDL_RenderClear(renderer);
+                        SDL_RenderCopy(renderer, image, NULL, NULL);
+                        SDL_RenderPresent(renderer);
+                        isTheSizeOfImage = true;
+                    }
                 default:
                     break;
             }
         }
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
 
-        SDL_RenderCopy(renderer, image, NULL, NULL);
-
-        SDL_RenderPresent(renderer);
 
         SDL_Delay(16);
-        end = SDL_GetTicks();
-        printf("FPS: %d\n", 1000/(end-start));
     }
 
+    free(path);
     SDL_DestroyTexture(image);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
