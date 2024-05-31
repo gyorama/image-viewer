@@ -33,8 +33,10 @@ int main(int argc, char const *argv[]) {
     } else if (argc >= 2) {
         for (int8_t i = 1; i < argc; i+=1) {
             switch (argv[i][0]) {
-            
-            default:
+            case '-':
+                break;
+
+            case '/':
                 if (strlen(path) < strlen(argv[i])) {
                     path = realloc(path, strlen(argv[i])*sizeof(char));
                     if (!path) {
@@ -45,6 +47,9 @@ int main(int argc, char const *argv[]) {
                 }
                 strcpy(path, argv[i]);
                 break;
+            
+            default:
+                printf("Incorrect option: %s", argv[i]);
             }
         }
     }
