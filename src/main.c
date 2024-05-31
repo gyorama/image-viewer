@@ -33,8 +33,6 @@ int main(int argc, char const *argv[]) {
     } else if (argc >= 2) {
         for (int8_t i = 1; i < argc; i+=1) {
             switch (argv[i][0]) {
-            case '-':
-                break;
 
             case '/':
                 if (strlen(path) < strlen(argv[i])) {
@@ -104,12 +102,16 @@ int main(int argc, char const *argv[]) {
         return 1;
     }
 
+    uint16_t dimensions[] = {imgSurf->w, imgSurf->h};
+
     SDL_Texture *image = SDL_CreateTextureFromSurface(renderer, imgSurf);
     SDL_RenderCopy(renderer, image, NULL, NULL);
     SDL_RenderPresent(renderer);
 
+    SDL_FreeSurface(imgSurf);
+
     bool isFullscreen = false;
-    bool isTheSizeOfImage = false;
+    bool isResized = false;
 
     while (!hasQuit) {
         if (SDL_PollEvent(&event)) {
@@ -119,30 +121,29 @@ int main(int argc, char const *argv[]) {
                     break;
                 case SDL_KEYDOWN:
                     if (event.key.keysym.scancode == SDL_SCANCODE_F) {
-                        SDL_SetWindowFullscreen(window, (isFullscreen) ? SDL_WINDOW_FULLSCREEN : 0); // set window to fullscreen if `fullscreen` is true  
+                        SDL_SetWindowFullscreen(window, (isFullscreen) ?  0 : SDL_WINDOW_FULLSCREEN); // set window to fullscreen if `fullscreen` is true  
                         isFullscreen = (isFullscreen) ? false : true; // Sidenote: I think I'm overusing the ? operator
                     } else if (event.key.keysym.scancode == SDL_SCANCODE_R) {
-                        // inconsistency in ? and if statement in this and previous part is because this part requires 2 arguments
-                        if (isTheSizeOfImage) {
+                        if (isResized) {
                             SDL_SetWindowSize(window, WIN_WIDTH, WIN_HEIGHT);
                             SDL_RenderClear(renderer);
                             SDL_RenderCopy(renderer, image, NULL, NULL);
                             SDL_RenderPresent(renderer);
-                            isTheSizeOfImage = false;
+                            isResized = false;
                             continue;
                         }
-                        SDL_SetWindowSize(window, imgSurf->w, imgSurf->h);
+                        SDL_SetWindowSize(window, dimensions[0], dimensions[1]);
                         SDL_RenderClear(renderer);
                         SDL_RenderCopy(renderer, image, NULL, NULL);
                         SDL_RenderPresent(renderer);
-                        isTheSizeOfImage = true;
+                        isResized = true;
                     }
                 default:
                     break;
             }
         }
 
-
+        // Limit framerate because you don't need an image rendered at 1000FPS
         SDL_Delay(16);
     }
 
