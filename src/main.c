@@ -114,7 +114,7 @@ int main(int argc, char const *argv[]) {
     bool isResized = false;
 
     while (!hasQuit) {
-        if (SDL_PollEvent(&event)) {
+        if (SDL_WaitEvent(&event)) {
             switch (event.type) {
                 case SDL_QUIT:
                     hasQuit = true;
