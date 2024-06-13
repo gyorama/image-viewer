@@ -18,14 +18,12 @@ void help(void) {
 }
 
 int main(int argc, char const *argv[]) {
-    char *path = calloc(400, sizeof(char));
+    char path[400];
 
     if (!path) {
         perror("Failed to allocate space to the path string");
         return 1;
     }
-
-    char *backupPath = path;
 
     if (argc < 2) {
         help();
@@ -35,26 +33,13 @@ int main(int argc, char const *argv[]) {
             switch (argv[i][0]) {
 
             case '/':
-                if (strlen(path) < strlen(argv[i])) {
-                    path = realloc(path, strlen(argv[i])*sizeof(char));
-                    if (!path) {
-                        perror("Failed to resize space to the path string");
-                        free(backupPath);
-                        return 1;
-                    }
-                }
-                strcpy(path, argv[i]);
+                strncpy(path, argv[i], 400);
                 break;
             
             default:
                 printf("Incorrect option: %s", argv[i]);
             }
         }
-    }
-    if (path[0] == '\0') {
-        perror("Image path is empty\n");
-        free(path);
-        return 1;
     }
 
     // Initialize the SDL libraries
@@ -85,7 +70,6 @@ int main(int argc, char const *argv[]) {
     
     if (!renderer) {
         printf("Renderer creation error: %s\n", SDL_GetError());
-        free(path);
         SDL_Quit();
         return 1;
     }
@@ -97,10 +81,10 @@ int main(int argc, char const *argv[]) {
 
     if (!imgSurf) {
         fprintf(stderr, "Image error: %s\n", SDL_GetError());
-        free(path);
         SDL_Quit();
         return 1;
     }
+
 
     uint16_t dimensions[] = {imgSurf->w, imgSurf->h};
 
@@ -146,8 +130,6 @@ int main(int argc, char const *argv[]) {
         // Limit framerate because you don't need an image rendered at 1000FPS
         SDL_Delay(16);
     }
-
-    free(path);
     SDL_DestroyTexture(image);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
